@@ -145,7 +145,7 @@ class TextureToMaterial(bpy.types.Operator):
             bsdf_node = nt.nodes.get("Principled BSDF")
             #and change the properties
             bpy.data.images.load(tex_absolute_path.replace(".meta", ""), check_existing=True)
-            image_texture_node.location = (350, 640)
+            image_texture_node.location = (-510, 100)
             image_texture_node.image = bpy.data.images[image_name]
             image_texture_node.interpolation = "Closest"
             # link the two nodes
