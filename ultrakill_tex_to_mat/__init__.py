@@ -130,6 +130,8 @@ class TextureToMaterial(bpy.types.Operator):
                     "texPath": str(tex_directory + image_name),
                     "matPath": str(mat_absolute_path)
                 }
+            #alphabetically sort materials before import (only matters if multiple selected)
+            materials_to_assign.sort(key=lambda m: m.name)
 
             # create new material with the texture IF IT IS UNIQUE
             # if its not then just use the old one
