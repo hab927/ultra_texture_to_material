@@ -4,10 +4,11 @@ This is a Blender Add-On meant to make material creation in Blender for Rude cus
 
 ## Usage
 
-1. Compress the root `ultrakill_tex_to_mat` folder into a .zip file and open this in Blender using the `Edit > Preferences > Add-Ons > arrow in top-right > Install From Disk...` option.
-2. When you have an object selected, select a file from the file browser (click on **Shading** tab at the top toolbar) and right click.
-3. Press "Assign Material using Selected" and the selected object will have the new materials.
-4. If you are in edit mode and have faces selected, it will also assign the material to those faces.
+1. Download the `ultrakill_tex_to_mat.zip` file
+2. Navigate to `Edit > Preferences > Add-Ons > arrow in top-right > Install From Disk...`. Choose the .zip file.
+3. When you have an object selected, select a file from the file browser (click on **Shading** tab at the top toolbar) and right click
+4. Press "Assign Material using Selected" and the selected object will have the new materials
+5. If you are in edit mode and have faces selected, it will also assign the material to those faces
 
 ## Known Issues
 
