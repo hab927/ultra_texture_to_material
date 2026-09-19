@@ -117,7 +117,6 @@ class TextureToMaterial(bpy.types.Operator):
                         file_content = f.read()
                     guid_match = re.search(self.mat_guid_pattern, file_content)
                     if not guid_match or guid_match.group(1) != tex_guid:
-                        mat_absolute_path = "None"
                         continue
                     name_match = re.search(self.mat_name_pattern, file_content)
                     mat_name = name_match.group(1)
