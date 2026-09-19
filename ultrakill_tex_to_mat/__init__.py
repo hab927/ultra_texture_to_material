@@ -139,6 +139,7 @@ class TextureToMaterial(bpy.types.Operator):
                 continue
             
             material = bpy.data.materials.new(name = mat_name)
+            material.preview_render_type = 'FLAT'
             nt = material.node_tree
             image_texture_node = nt.nodes.new("ShaderNodeTexImage")
             bsdf_node = nt.nodes.get("Principled BSDF")
