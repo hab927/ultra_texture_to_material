@@ -169,6 +169,9 @@ class TextureToMaterial(bpy.types.Operator):
 
         for obj in bpy.context.selected_objects:
             for am in materials_to_assign:
+                current_materials = [m.name for m in obj.data.materials]
+                if am.name in current_materials:
+                    continue    # prevent making duplicate materials
                 obj.data.materials.append(bpy.data.materials[am.name])
                 # because we just added a material, it will be at the end. so to get the index just take the length of the materials list and subtract 1
                 mat_index = len(obj.data.materials) - 1;
@@ -196,6 +199,7 @@ def unregister():
     bpy.types.FILEBROWSER_MT_context_menu.remove(menu_item)
     bpy.types.VIEW3D_MT_edit_mesh_faces.remove(menu_item)
     bpy.utils.unregister_class(TextureToMaterial)
-    
+
+#uncomment this if using in the blender text editor
 # if __name__ == "__main__":
 #      register()
