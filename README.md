@@ -16,7 +16,5 @@ This is a Blender Add-On meant to make material creation in Blender for Rude cus
 
 ## To-Do
 
-- Add caching. Cache will likely be a `.json` file in the Rude project's `Assets` folder, acting as a lookup table for texture/material pairs.
 - Generalized texture/material folder support. Will likely have user specify the Textures and Materials folders.
-- Optimized caching. If added, the ability to cache every texture/material pair once can be added to create a master `.json` cache, making future imports much faster. However, currently, caching like this is a process that takes multiple minutes.
-    - Current approaches might be CPU multithreading, GPU acceleration, or caching only on new imports.
+- Optimized caching. If added, the ability to cache every texture/material pair once can be added to create a master `.json` cache, making future imports much faster. However, currently, caching like this is a process that takes multiple minutes. Will probably do this with CPU multithreading.
