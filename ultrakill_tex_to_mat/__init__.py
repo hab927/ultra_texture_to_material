@@ -30,6 +30,13 @@ bl_info = {
     "category": "Generic",
 }
 
+class Prefs(bpy.types.PropertyGroup):
+    specular_toggle: bpy.props.BoolProperty(
+        name="Specular",
+        description="Enabling this removes gloss on imported textures",
+        default=True
+    ) # type: ignore
+
 class TextureToMaterial(bpy.types.Operator):
     """Texture to Material Script"""
     bl_idname = "object.ultrakill_material_from_image"
@@ -46,6 +53,8 @@ class TextureToMaterial(bpy.types.Operator):
         return len(context.selected_objects) > 0
 
     def execute(self, context):
+        specular_on = context.scene.textomat.specular_toggle
+        
         # ugly ass list comprehension to get the file browser area
         # context -> screen -> area -> area spaces -> space file browser -> params -> filename
         fb_area = [area for area in context.screen.areas if area.type == "FILE_BROWSER"][0]
@@ -135,6 +144,7 @@ class TextureToMaterial(bpy.types.Operator):
 
             # create new material with the texture IF IT IS UNIQUE
             # if its not then just use the old one
+
             if mat_name in [m.name for m in list(bpy.data.materials)]:
                 materials_to_assign.append(bpy.data.materials[mat_name])
                 continue
@@ -151,6 +161,10 @@ class TextureToMaterial(bpy.types.Operator):
             image_texture_node.interpolation = "Closest"
             # link the two nodes
             nt.links.new(image_texture_node.outputs['Color'], bsdf_node.inputs['Base Color'])
+            nt.links.new(image_texture_node.outputs['Alpha'], bsdf_node.inputs['Alpha'])
+            if specular_on: # to gloss or not to gloss
+                bsdf_node.inputs['IOR'].default_value = 1.0
+                bsdf_node.inputs['Roughness'].default_value = 1.0
             materials_to_assign.append(material)
             
         # update cache with dicitonary contents
@@ -169,13 +183,24 @@ class TextureToMaterial(bpy.types.Operator):
             f.truncate()
 
         for obj in bpy.context.selected_objects:
+            # cleaning up
+            # make sure there aren't any blank materials in this object's material slots, if there are, just delete them
+            for m in obj.material_slots:
+                if type(m.material) is None:
+                    obj.active_material_index = m.slot_index
+                    bpy.ops.object.material_slot_remove()
+
+            # assign materials to everybody that needs it        
             for am in materials_to_assign:
                 current_materials = [m.name for m in obj.data.materials]
                 if am.name in current_materials:
-                    continue    # prevent making duplicate materials
-                obj.data.materials.append(bpy.data.materials[am.name])
-                # because we just added a material, it will be at the end. so to get the index just take the length of the materials list and subtract 1
-                mat_index = len(obj.data.materials) - 1;
+                    for slot in obj.material_slots:
+                        if slot.name == am.name:
+                            mat_index = slot.slot_index
+                else:
+                    obj.data.materials.append(bpy.data.materials[am.name])
+                    # because we just added a material, it will be at the end. so to get the index just take the length of the materials list and subtract 1
+                    mat_index = len(obj.data.materials) - 1;
                 # assign to faces if in edit mode
                 if obj.mode == 'EDIT':
                     me = obj.data
@@ -187,20 +212,46 @@ class TextureToMaterial(bpy.types.Operator):
                         bmesh.update_edit_mesh(me)
 
         return {'FINISHED'}
+    
+class SettingsPanel(bpy.types.Panel):
+    bl_label = "TtM Settings"
+    bl_idname = "VIEW3D_PT_ttm_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'TTM'
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        settings = scene.textomat
+        
+        col = layout.column(align=True)
+        col.label(text="scientists reveal the hi")
+        col.prop(settings, "specular_toggle")
+
+classes = (
+    Prefs,
+    TextureToMaterial,
+    SettingsPanel
+)
 
 def menu_item(self, context):
     self.layout.operator(TextureToMaterial.bl_idname)
 
 def register():
-    bpy.utils.register_class(TextureToMaterial)
+    for c in classes:
+        bpy.utils.register_class(c)
+    bpy.types.Scene.textomat = bpy.props.PointerProperty(type=Prefs)
     bpy.types.FILEBROWSER_MT_context_menu.append(menu_item)
     bpy.types.VIEW3D_MT_edit_mesh_faces.append(menu_item)
 
 def unregister():
     bpy.types.FILEBROWSER_MT_context_menu.remove(menu_item)
     bpy.types.VIEW3D_MT_edit_mesh_faces.remove(menu_item)
-    bpy.utils.unregister_class(TextureToMaterial)
+    for c in classes:
+        bpy.utils.unregister_class(c)
+    del bpy.types.Scene.textomat
 
 #uncomment this if using in the blender text editor
-# if __name__ == "__main__":
-#      register()
+#if __name__ == "__main__":
+#     register()
