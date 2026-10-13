@@ -11,8 +11,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
-import bmesh
+import bpy # type: ignore       thank you so much pylance
+import bmesh # type: ignore     thank you so much pylance
 import re
 import os
 import json
@@ -32,10 +32,16 @@ bl_info = {
 
 class Prefs(bpy.types.PropertyGroup):
     specular_toggle: bpy.props.BoolProperty(
-        name="Specular",
+        name="Disable gloss",
         description="Enabling this removes gloss on imported textures",
         default=True
     ) # type: ignore
+
+    fast_assign: bpy.props.BoolProperty(
+        name="Fast assign",
+        description="Assigns materials automatically when they are selected in the picker",
+        default=True
+    ) #type: ignore
 
 class TextureToMaterial(bpy.types.Operator):
     """Texture to Material Script"""
@@ -224,10 +230,62 @@ class SettingsPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         settings = scene.textomat
+        col = layout.column(align=True)
+        col.label(text="Texture to material")
+        col.prop(settings, "specular_toggle")
         
         col = layout.column(align=True)
-        col.label(text="scientists reveal the hi")
-        col.prop(settings, "specular_toggle")
+        col.label(text="Texturing assists")
+        col.prop(settings, "fast_assign")
+        
+# fast assign
+# https://blenderartists.org/t/subscribe-to-active-objects-active-material-index/1465192
+
+active_object_owner  = 123
+material_index_owner = 124
+
+def on_active_object_changed():
+    bpy.msgbus.clear_by_owner(material_index_owner)
+    active = bpy.context.view_layer.objects.active
+    if active:
+        bpy.msgbus.subscribe_rna(
+            key=active.path_resolve("active_material_index", False),
+            owner=material_index_owner,
+            notify=on_active_material_index_changed,
+            args=(active,)
+        )
+
+def on_active_material_index_changed(active_obj):
+    print(active_obj.name, "material index is", active_obj.active_material_index)
+    fast_assign = bpy.context.scene.textomat.fast_assign
+    
+    if fast_assign:
+        # plagiarized from myself :)
+        for obj in bpy.context.selected_objects:
+            for m in obj.material_slots:
+                if type(m.material) is None:
+                    obj.active_material_index = m.slot_index
+                    bpy.ops.object.material_slot_remove()
+
+            am = active_obj.material_slots[active_obj.active_material_index]
+            current_materials = [m.name for m in obj.data.materials]
+            if am.name in current_materials:
+                for slot in obj.material_slots:
+                    if slot.name == am.name:
+                        mat_index = slot.slot_index
+            else:
+                obj.data.materials.append(bpy.data.materials[am.name])
+                mat_index = len(obj.data.materials) - 1;
+            if obj.mode == 'EDIT':
+                me = obj.data
+                bm = bmesh.from_edit_mesh(me)
+                selected_faces = [f for f in bm.faces if f.select]
+                if selected_faces:
+                    for face in selected_faces:
+                        face.material_index = mat_index
+                    bmesh.update_edit_mesh(me)
+
+# end fast assign
 
 classes = (
     Prefs,
@@ -244,6 +302,17 @@ def register():
     bpy.types.Scene.textomat = bpy.props.PointerProperty(type=Prefs)
     bpy.types.FILEBROWSER_MT_context_menu.append(menu_item)
     bpy.types.VIEW3D_MT_edit_mesh_faces.append(menu_item)
+    bpy.msgbus.clear_by_owner(active_object_owner)
+
+    # Subscribe to active object changes.
+    bpy.msgbus.subscribe_rna(
+        key=(bpy.types.LayerObjects, "active"),
+        owner=active_object_owner,
+        args=(),
+        notify=on_active_object_changed
+    )
+    # Subscribe to active material index changes.
+    on_active_object_changed()
 
 def unregister():
     bpy.types.FILEBROWSER_MT_context_menu.remove(menu_item)
@@ -251,7 +320,8 @@ def unregister():
     for c in classes:
         bpy.utils.unregister_class(c)
     del bpy.types.Scene.textomat
+    bpy.msgbus.clear_by_owner(active_object_owner)
 
 #uncomment this if using in the blender text editor
-#if __name__ == "__main__":
-#     register()
+if __name__ == "__main__":
+     register()
